@@ -2,11 +2,29 @@
 #include <poly_traj/polynomial_traj.h>
 
 namespace fast_planner {
-void PolynomialTraj::waypointsTraj(const Eigen::MatrixXd& positions, const Eigen::Vector3d& start_vel,
-                                   const Eigen::Vector3d& end_vel, const Eigen::Vector3d& start_acc,
-                                   const Eigen::Vector3d& end_acc, const Eigen::VectorXd& times,
-                                   PolynomialTraj& poly_traj) {
+void PolynomialTraj::waypointsTraj(const Eigen::MatrixXd &positions,
+                                   const Eigen::Vector3d &start_vel,
+                                   const Eigen::Vector3d &end_vel,
+                                   const Eigen::Vector3d &start_acc,
+                                   const Eigen::Vector3d &end_acc,
+                                   const Eigen::VectorXd &times,
+                                   PolynomialTraj &poly_traj) {
   const int seg_num = times.size();
+
+  if (seg_num < 1) {
+    std::cout << "\033[1;31m"
+              << "seg_num < 1" << std::endl;
+    return;
+  }
+
+  if (positions.rows() != seg_num + 1 || positions.cols() != 3) {
+    std::cout << "\033[1;31m"
+              << "[ERROR] positions size mismatch: rows=" << positions.rows()
+              << " cols=" << positions.cols()
+              << ", expected rows=" << seg_num + 1 << " cols=3"
+              << "\033[0m" << std::endl;
+    return;
+  }
 
   // Helper to construct the mapping matrix
   const static auto Factorial = [](int x) {
@@ -16,12 +34,13 @@ void PolynomialTraj::waypointsTraj(const Eigen::MatrixXd& positions, const Eigen
     return fac;
   };
 
-  // Boundary derivatives of each polynomial segment, the x,y,z axes are independent
-  // { {p0, p1, v0, v1, a0, a1}, {p1, p2, v1, v2, a1, a2}... }
+  std::cout << "Poly Traj" << std::endl;
+  // Boundary derivatives of each polynomial segment, the x,y,z axes are
+  // independent { {p0, p1, v0, v1, a0, a1}, {p1, p2, v1, v2, a1, a2}... }
   Eigen::VectorXd Dx = Eigen::VectorXd::Zero(seg_num * 6);
   Eigen::VectorXd Dy = Eigen::VectorXd::Zero(seg_num * 6);
   Eigen::VectorXd Dz = Eigen::VectorXd::Zero(seg_num * 6);
-
+  std::cout << "Poly Traj 1" << std::endl;
   for (int k = 0; k < seg_num; k++) {
     Dx(k * 6) = positions(k, 0);
     Dx(k * 6 + 1) = positions(k + 1, 0);
@@ -48,7 +67,7 @@ void PolynomialTraj::waypointsTraj(const Eigen::MatrixXd& positions, const Eigen
       Dz(k * 6 + 5) = end_acc(2);
     }
   }
-
+  std::cout << "Poly Traj 2" << std::endl;
   // Mapping matrix that transform the coefficient into boundary state
   // A*p = d
   Eigen::MatrixXd Ab;
@@ -58,32 +77,34 @@ void PolynomialTraj::waypointsTraj(const Eigen::MatrixXd& positions, const Eigen
     for (int i = 0; i < 3; i++) {
       Ab(2 * i, i) = Factorial(i);
       for (int j = i; j < 6; j++)
-        Ab(2 * i + 1, j) = Factorial(j) / Factorial(j - i) * pow(times(k), j - i);
+        Ab(2 * i + 1, j) =
+            Factorial(j) / Factorial(j - i) * pow(times(k), j - i);
     }
     A.block(k * 6, k * 6, 6, 6) = Ab;
   }
-
-  // Selection Matrix, which map the fixed and free derivatives into original derivative
-  // d = Ct * [df, dp]
+  std::cout << "Poly Traj 3" << std::endl;
+  // Selection Matrix, which map the fixed and free derivatives into original
+  // derivative d = Ct * [df, dp]
   Eigen::MatrixXd Ct, C;
 
-  int num_f = 2 * seg_num + 4;  // 2*seg_num for position, 4 for start/end vel/acc
-  int num_p = 2 * seg_num - 2;  // (seg_num - 1)
+  int num_f =
+      2 * seg_num + 4; // 2*seg_num for position, 4 for start/end vel/acc
+  int num_p = 2 * seg_num - 2; // (seg_num - 1)
   int num_d = 6 * seg_num;
   Ct = Eigen::MatrixXd::Zero(num_d, num_f + num_p);
   Ct(0, 0) = 1;
   Ct(2, 1) = 1;
-  Ct(4, 2) = 1;  // stack the start point
+  Ct(4, 2) = 1; // stack the start point
   Ct(1, 3) = 1;
   Ct(3, 2 * seg_num + 4) = 1;
   Ct(5, 2 * seg_num + 5) = 1;
 
   Ct(6 * (seg_num - 1) + 0, 2 * seg_num + 0) = 1;
-  Ct(6 * (seg_num - 1) + 1, 2 * seg_num + 1) = 1;  // Stack the end point
+  Ct(6 * (seg_num - 1) + 1, 2 * seg_num + 1) = 1; // Stack the end point
   Ct(6 * (seg_num - 1) + 2, 4 * seg_num + 0) = 1;
-  Ct(6 * (seg_num - 1) + 3, 2 * seg_num + 2) = 1;  // Stack the end point
+  Ct(6 * (seg_num - 1) + 3, 2 * seg_num + 2) = 1; // Stack the end point
   Ct(6 * (seg_num - 1) + 4, 4 * seg_num + 1) = 1;
-  Ct(6 * (seg_num - 1) + 5, 2 * seg_num + 3) = 1;  // Stack the end point
+  Ct(6 * (seg_num - 1) + 5, 2 * seg_num + 3) = 1; // Stack the end point
 
   for (int j = 2; j < seg_num; j++) {
     Ct(6 * (j - 1) + 0, 2 + 2 * (j - 1) + 0) = 1;
@@ -95,7 +116,7 @@ void PolynomialTraj::waypointsTraj(const Eigen::MatrixXd& positions, const Eigen
   }
 
   C = Ct.transpose();
-
+  std::cout << "Poly Traj 4" << std::endl;
   Eigen::VectorXd Dx1 = C * Dx;
   Eigen::VectorXd Dy1 = C * Dy;
   Eigen::VectorXd Dz1 = C * Dz;
@@ -103,19 +124,42 @@ void PolynomialTraj::waypointsTraj(const Eigen::MatrixXd& positions, const Eigen
   // Matrix mapping coefficent to jerk
   //  J = pTQp
   Eigen::MatrixXd Q = Eigen::MatrixXd::Zero(seg_num * 6, seg_num * 6);
-
+  std::cout << "Poly Traj 5" << std::endl;
+  std::cout << "seg_num: " << seg_num << std::endl;
   for (int k = 0; k < seg_num; k++)
     for (int i = 3; i < 6; i++)
       for (int j = 3; j < 6; j++) {
-        Q(k * 6 + i, k * 6 + j) =
-            i * (i - 1) * (i - 2) * j * (j - 1) * (j - 2) / (i + j - 5) * pow(times(k), (i + j - 5));
+        Q(k * 6 + i, k * 6 + j) = i * (i - 1) * (i - 2) * j * (j - 1) *
+                                  (j - 2) / (i + j - 5) *
+                                  pow(times(k), (i + j - 5));
       }
 
   // Matrix that maps d'=[df,dp] to jerk
   // J = d'T R d'
-  Eigen::MatrixXd R = C * A.transpose().inverse() * Q * A.inverse() * Ct;
+  // Eigen::MatrixXd R = C * A.transpose().inverse() * Q * A.inverse() * Ct;
+  std::cout << "Poly Traj 5.1" << std::endl;
+  Eigen::MatrixXd A_inv = A.inverse();
+  std::cout << "Poly Traj 5.2" << std::endl;
+  Eigen::MatrixXd A_inv_T = A_inv.transpose();
+  std::cout << "Poly Traj 6" << std::endl;
 
-  Eigen::VectorXd Dxf(2 * seg_num + 4), Dyf(2 * seg_num + 4), Dzf(2 * seg_num + 4);
+  std::cout << "C: " << C.rows() << " x " << C.cols() << "\n";
+  std::cout << "A_inv_T: " << A_inv_T.rows() << " x " << A_inv_T.cols() << "\n";
+  std::cout << "Q: " << Q.rows() << " x " << Q.cols() << "\n";
+  std::cout << "A_inv: " << A_inv.rows() << " x " << A_inv.cols() << "\n";
+  std::cout << "Ct: " << Ct.rows() << " x " << Ct.cols() << "\n";
+  // Eigen::MatrixXd R = C * A_inv_T * Q * A_inv * Ct;
+  Eigen::MatrixXd temp1 = C * A_inv_T;
+  std::cout << "temp1: " << temp1.rows() << " x " << temp1.cols() << "\n";
+  Eigen::MatrixXd temp2 = temp1 * Q;
+  std::cout << "temp1: " << temp1.rows() << " x " << temp1.cols() << "\n";
+  Eigen::MatrixXd temp3 = temp2 * A_inv;
+  std::cout << "temp1: " << temp1.rows() << " x " << temp1.cols() << "\n";
+  Eigen::MatrixXd R = temp3 * Ct;
+
+  std::cout << "Poly Traj 6.0" << std::endl;
+  Eigen::VectorXd Dxf(2 * seg_num + 4), Dyf(2 * seg_num + 4),
+      Dzf(2 * seg_num + 4);
 
   Dxf = Dx1.segment(0, 2 * seg_num + 4);
   Dyf = Dy1.segment(0, 2 * seg_num + 4);
@@ -129,28 +173,41 @@ void PolynomialTraj::waypointsTraj(const Eigen::MatrixXd& positions, const Eigen
   Rff = R.block(0, 0, 2 * seg_num + 4, 2 * seg_num + 4);
   Rfp = R.block(0, 2 * seg_num + 4, 2 * seg_num + 4, 2 * seg_num - 2);
   Rpf = R.block(2 * seg_num + 4, 0, 2 * seg_num - 2, 2 * seg_num + 4);
-  Rpp = R.block(2 * seg_num + 4, 2 * seg_num + 4, 2 * seg_num - 2, 2 * seg_num - 2);
-
+  Rpp = R.block(2 * seg_num + 4, 2 * seg_num + 4, 2 * seg_num - 2,
+                2 * seg_num - 2);
+  std::cout << "Poly Traj 6.1" << std::endl;
   // Solve the optimal free derivative in closed form
+  std::cout << "seg_num: " << seg_num << std::endl;
+  Eigen::VectorXd Dxp(2 * seg_num - 2), Dyp(2 * seg_num - 2),
+      Dzp(2 * seg_num - 2);
+  // Dxp = -(Rpp.inverse() * Rfp.transpose()) * Dxf;
+  // Dyp = -(Rpp.inverse() * Rfp.transpose()) * Dyf;
+  // Dzp = -(Rpp.inverse() * Rfp.transpose()) * Dzf;
 
-  Eigen::VectorXd Dxp(2 * seg_num - 2), Dyp(2 * seg_num - 2), Dzp(2 * seg_num - 2);
-  Dxp = -(Rpp.inverse() * Rfp.transpose()) * Dxf;
-  Dyp = -(Rpp.inverse() * Rfp.transpose()) * Dyf;
-  Dzp = -(Rpp.inverse() * Rfp.transpose()) * Dzf;
+  Eigen::MatrixXd Rpp_inv = Rpp.inverse();
+  Dxp = -Rpp_inv * Rfp.transpose() * Dxf;
+  Dyp = -Rpp_inv * Rfp.transpose() * Dyf;
+  Dzp = -Rpp_inv * Rfp.transpose() * Dzf;
 
   Dx1.segment(2 * seg_num + 4, 2 * seg_num - 2) = Dxp;
   Dy1.segment(2 * seg_num + 4, 2 * seg_num - 2) = Dyp;
   Dz1.segment(2 * seg_num + 4, 2 * seg_num - 2) = Dzp;
-
+  std::cout << "Poly Traj 7" << std::endl;
   // Transform the derivatives back to coefficient
   Eigen::VectorXd Px(6 * seg_num), Py(6 * seg_num), Pz(6 * seg_num);
-  Px = (A.inverse() * Ct) * Dx1;
-  Py = (A.inverse() * Ct) * Dy1;
-  Pz = (A.inverse() * Ct) * Dz1;
+  // Px = (A.inverse() * Ct) * Dx1;
+  // Py = (A.inverse() * Ct) * Dy1;
+  // Pz = (A.inverse() * Ct) * Dz1;
+  A_inv = A.inverse();
+  Eigen::MatrixXd M = A_inv * Ct;
+  Px = M * Dx1;
+  Py = M * Dy1;
+  Pz = M * Dz1;
 
   poly_traj.reset();
   for (int i = 0; i < seg_num; i++) {
-    Polynomial poly(Px.segment<6>(i * 6), Py.segment<6>(i * 6), Pz.segment<6>(i * 6), times[i]);
+    Polynomial poly(Px.segment<6>(i * 6), Py.segment<6>(i * 6),
+                    Pz.segment<6>(i * 6), times[i]);
     poly_traj.addSegment(poly);
     // poly_coeff.block(i, 0, 1, 6) = ;
     // poly_coeff.block(i, 6, 1, 6) = Py.segment(i * 6, 6).transpose();
@@ -162,7 +219,8 @@ void PolynomialTraj::waypointsTraj(const Eigen::MatrixXd& positions, const Eigen
   //   vector<double> cx(6), cy(6), cz(6);
   //   for (int j = 0; j < 6; ++j)
   //   {
-  //     cx[j] = poly_coeff(i, j), cy[j] = poly_coeff(i, j + 6), cz[j] = poly_coeff(i, j + 12);
+  //     cx[j] = poly_coeff(i, j), cy[j] = poly_coeff(i, j + 6), cz[j] =
+  //     poly_coeff(i, j + 12);
   //   }
   //   reverse(cx.begin(), cx.end());
   //   reverse(cy.begin(), cy.end());
@@ -170,13 +228,13 @@ void PolynomialTraj::waypointsTraj(const Eigen::MatrixXd& positions, const Eigen
   //   double ts = times(i);
   //   poly_traj.addSegment(cx, cy, cz, ts);
   // }
-
+  std::cout << "Poly Traj 8" << std::endl;
+  return;
   // return poly_traj;
 }
 
-// PolynomialTraj fastLine4deg(Eigen::Vector3d start, Eigen::Vector3d end, double max_vel, double
-// max_acc, double
-// max_jerk)
+// PolynomialTraj fastLine4deg(Eigen::Vector3d start, Eigen::Vector3d end,
+// double max_vel, double max_acc, double max_jerk)
 // {
 //   Eigen::Vector3d disp = end - start;
 //   double len = disp.norm();
@@ -227,10 +285,10 @@ void PolynomialTraj::waypointsTraj(const Eigen::MatrixXd& positions, const Eigen
 
 //   poly_traj.addSegment(cx, cy, cz, t1);
 
-//   Eigen::Vector3d p1 = p0 + v0 * t1 + (1 / 2.0) * a0 * pow(t1, 2) + (1 / 6.0) * j0 * pow(t1, 3);
-//   Eigen::Vector3d v1 = v0 + a0 * t1 + (1 / 2.0) * j0 * pow(t1, 2);
-//   Eigen::Vector3d a1 = a0 + j0 * t1;
-//   Eigen::Vector3d j1 = Eigen::Vector3d::Zero();
+//   Eigen::Vector3d p1 = p0 + v0 * t1 + (1 / 2.0) * a0 * pow(t1, 2) + (1 / 6.0)
+//   * j0 * pow(t1, 3); Eigen::Vector3d v1 = v0 + a0 * t1 + (1 / 2.0) * j0 *
+//   pow(t1, 2); Eigen::Vector3d a1 = a0 + j0 * t1; Eigen::Vector3d j1 =
+//   Eigen::Vector3d::Zero();
 
 //   /* second segment */
 //   cx = cy = cz = zero;
@@ -254,10 +312,10 @@ void PolynomialTraj::waypointsTraj(const Eigen::MatrixXd& positions, const Eigen
 
 //   poly_traj.addSegment(cx, cy, cz, t2);
 
-//   Eigen::Vector3d p2 = p1 + v1 * t2 + (1 / 2.0) * a1 * pow(t2, 2) + (1 / 6.0) * j1 * pow(t2, 3);
-//   Eigen::Vector3d v2 = v1 + a1 * t2 + (1 / 2.0) * j1 * pow(t2, 2);
-//   Eigen::Vector3d a2 = a1 + j1 * t2;
-//   Eigen::Vector3d j2 = -max_jerk * scale_vec;
+//   Eigen::Vector3d p2 = p1 + v1 * t2 + (1 / 2.0) * a1 * pow(t2, 2) + (1 / 6.0)
+//   * j1 * pow(t2, 3); Eigen::Vector3d v2 = v1 + a1 * t2 + (1 / 2.0) * j1 *
+//   pow(t2, 2); Eigen::Vector3d a2 = a1 + j1 * t2; Eigen::Vector3d j2 =
+//   -max_jerk * scale_vec;
 
 //   /* third segment */
 //   cx = cy = cz = zero;
@@ -281,10 +339,10 @@ void PolynomialTraj::waypointsTraj(const Eigen::MatrixXd& positions, const Eigen
 
 //   poly_traj.addSegment(cx, cy, cz, t3);
 
-//   Eigen::Vector3d p3 = p2 + v2 * t3 + (1 / 2.0) * a2 * pow(t3, 2) + (1 / 6.0) * j2 * pow(t3, 3);
-//   Eigen::Vector3d v3 = v2 + a2 * t3 + (1 / 2.0) * j2 * pow(t3, 2);
-//   Eigen::Vector3d a3 = a2 + j2 * t3;
-//   Eigen::Vector3d j3 = Eigen::Vector3d::Zero();
+//   Eigen::Vector3d p3 = p2 + v2 * t3 + (1 / 2.0) * a2 * pow(t3, 2) + (1 / 6.0)
+//   * j2 * pow(t3, 3); Eigen::Vector3d v3 = v2 + a2 * t3 + (1 / 2.0) * j2 *
+//   pow(t3, 2); Eigen::Vector3d a3 = a2 + j2 * t3; Eigen::Vector3d j3 =
+//   Eigen::Vector3d::Zero();
 
 //   /* fourth segment */
 //   cx = cy = cz = zero;
@@ -308,10 +366,10 @@ void PolynomialTraj::waypointsTraj(const Eigen::MatrixXd& positions, const Eigen
 
 //   poly_traj.addSegment(cx, cy, cz, t4);
 
-//   Eigen::Vector3d p4 = p3 + v3 * t4 + (1 / 2.0) * a3 * pow(t4, 2) + (1 / 6.0) * j3 * pow(t4, 3);
-//   Eigen::Vector3d v4 = v3 + a3 * t4 + (1 / 2.0) * j3 * pow(t4, 2);
-//   Eigen::Vector3d a4 = a3 + j3 * t4;
-//   Eigen::Vector3d j4 = -max_jerk * scale_vec;
+//   Eigen::Vector3d p4 = p3 + v3 * t4 + (1 / 2.0) * a3 * pow(t4, 2) + (1 / 6.0)
+//   * j3 * pow(t4, 3); Eigen::Vector3d v4 = v3 + a3 * t4 + (1 / 2.0) * j3 *
+//   pow(t4, 2); Eigen::Vector3d a4 = a3 + j3 * t4; Eigen::Vector3d j4 =
+//   -max_jerk * scale_vec;
 
 //   /* fifth segment */
 //   cx = cy = cz = zero;
@@ -335,10 +393,10 @@ void PolynomialTraj::waypointsTraj(const Eigen::MatrixXd& positions, const Eigen
 
 //   poly_traj.addSegment(cx, cy, cz, t5);
 
-//   Eigen::Vector3d p5 = p4 + v4 * t5 + (1 / 2.0) * a4 * pow(t5, 2) + (1 / 6.0) * j4 * pow(t5, 3);
-//   Eigen::Vector3d v5 = v4 + a4 * t5 + (1 / 2.0) * j4 * pow(t5, 2);
-//   Eigen::Vector3d a5 = a4 + j4 * t5;
-//   Eigen::Vector3d j5 = Eigen::Vector3d::Zero();
+//   Eigen::Vector3d p5 = p4 + v4 * t5 + (1 / 2.0) * a4 * pow(t5, 2) + (1 / 6.0)
+//   * j4 * pow(t5, 3); Eigen::Vector3d v5 = v4 + a4 * t5 + (1 / 2.0) * j4 *
+//   pow(t5, 2); Eigen::Vector3d a5 = a4 + j4 * t5; Eigen::Vector3d j5 =
+//   Eigen::Vector3d::Zero();
 
 //   /* sixth segment */
 //   cx = cy = cz = zero;
@@ -362,10 +420,10 @@ void PolynomialTraj::waypointsTraj(const Eigen::MatrixXd& positions, const Eigen
 
 //   poly_traj.addSegment(cx, cy, cz, t6);
 
-//   Eigen::Vector3d p6 = p5 + v5 * t6 + (1 / 2.0) * a5 * pow(t6, 2) + (1 / 6.0) * j5 * pow(t6, 3);
-//   Eigen::Vector3d v6 = v5 + a5 * t6 + (1 / 2.0) * j5 * pow(t6, 2);
-//   Eigen::Vector3d a6 = a5 + j5 * t6;
-//   Eigen::Vector3d j6 = max_jerk * scale_vec;
+//   Eigen::Vector3d p6 = p5 + v5 * t6 + (1 / 2.0) * a5 * pow(t6, 2) + (1 / 6.0)
+//   * j5 * pow(t6, 3); Eigen::Vector3d v6 = v5 + a5 * t6 + (1 / 2.0) * j5 *
+//   pow(t6, 2); Eigen::Vector3d a6 = a5 + j5 * t6; Eigen::Vector3d j6 =
+//   max_jerk * scale_vec;
 
 //   /* seventh (last) segment */
 //   cx = cy = cz = zero;
@@ -392,8 +450,8 @@ void PolynomialTraj::waypointsTraj(const Eigen::MatrixXd& positions, const Eigen
 //   return poly_traj;
 // }
 
-// PolynomialTraj fastLine3deg(Eigen::Vector3d start, Eigen::Vector3d end, double max_vel, double
-// max_acc)
+// PolynomialTraj fastLine3deg(Eigen::Vector3d start, Eigen::Vector3d end,
+// double max_vel, double max_acc)
 // {
 //   Eigen::Vector3d disp = end - start;
 //   double len = disp.norm();
@@ -475,4 +533,4 @@ void PolynomialTraj::waypointsTraj(const Eigen::MatrixXd& positions, const Eigen
 
 //   return poly_traj;
 // }
-}
+} // namespace fast_planner

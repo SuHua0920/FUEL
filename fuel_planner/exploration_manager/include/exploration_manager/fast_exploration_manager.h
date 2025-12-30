@@ -58,6 +58,7 @@ private:
 
 public:
   typedef shared_ptr<FastExplorationManager> Ptr;
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
 
 }  // namespace fast_planner

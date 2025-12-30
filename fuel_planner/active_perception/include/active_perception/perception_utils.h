@@ -17,17 +17,16 @@ using std::vector;
 namespace fast_planner {
 class PerceptionUtils {
 public:
-  PerceptionUtils(ros::NodeHandle& nh);
-  ~PerceptionUtils() {
-  }
+  PerceptionUtils(ros::NodeHandle &nh);
+  ~PerceptionUtils() {}
   // Set position and yaw
-  void setPose(const Vector3d& pos, const double& yaw);
+  void setPose(const Vector3d &pos, const double &yaw);
 
   // Get info of current pose
-  void getFOV(vector<Vector3d>& list1, vector<Vector3d>& list2);
-  bool insideFOV(const Vector3d& point);
-  void getFOVBoundingBox(Vector3d& bmin, Vector3d& bmax);
-
+  void getFOV(vector<Vector3d> &list1, vector<Vector3d> &list2);
+  bool insideFOV(const Vector3d &point);
+  void getFOVBoundingBox(Vector3d &bmin, Vector3d &bmax);
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 private:
   // Data
   // Current camera pos and yaw
@@ -47,5 +46,5 @@ private:
   vector<Vector3d> cam_vertices1_, cam_vertices2_;
 };
 
-}  // namespace fast_planner
+} // namespace fast_planner
 #endif

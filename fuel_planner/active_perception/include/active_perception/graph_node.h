@@ -1,24 +1,24 @@
 #ifndef _GRAPH_NODE_H_
 #define _GRAPH_NODE_H_
-#include <vector>
-#include <unordered_map>
-#include <queue>
-#include <list>
-#include <memory>
-#include <iostream>
-#include <math.h>
-#include <algorithm>
 #include <Eigen/Eigen>
+#include <algorithm>
+#include <iostream>
+#include <list>
+#include <math.h>
+#include <memory>
+#include <queue>
+#include <unordered_map>
+#include <vector>
 
+using Eigen::Vector3d;
+using Eigen::Vector3i;
+using std::cout;
 using std::list;
 using std::queue;
 using std::shared_ptr;
 using std::unique_ptr;
 using std::unordered_map;
 using std::vector;
-using std::cout;
-using Eigen::Vector3d;
-using Eigen::Vector3i;
 
 class RayCaster;
 
@@ -31,12 +31,9 @@ public:
     g_value_ = 1000000;
     closed_ = false;
   }
-  ~BaseNode() {
-  }
+  ~BaseNode() {}
 
-  virtual void print() {
-    std::cout << "Base node" << std::endl;
-  }
+  virtual void print() { std::cout << "Base node" << std::endl; }
 
   int id_;
   bool closed_;
@@ -48,27 +45,27 @@ class Astar;
 class SDFMap;
 class ViewNode : public BaseNode {
 public:
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   typedef shared_ptr<ViewNode> Ptr;
-  ViewNode(const Vector3d& p, const double& y);
-  ViewNode() {
-  }
-  ~ViewNode() {
-  }
+  ViewNode(const Vector3d &p, const double &y);
+  ViewNode() {}
+  ~ViewNode() {}
 
-  virtual void print() {
-    std::cout << "View node" << yaw_ << std::endl;
-  }
+  virtual void print() { std::cout << "View node" << yaw_ << std::endl; }
 
   void printNeighbors() {
     for (auto v : neighbors_)
       v->print();
   }
 
-  double costTo(const ViewNode::Ptr& node);
-  static double computeCost(const Vector3d& p1, const Vector3d& p2, const double& y1, const double& y2,
-                            const Vector3d& v1, const double& yd1, vector<Vector3d>& path);
+  double costTo(const ViewNode::Ptr &node);
+  static double computeCost(const Vector3d &p1, const Vector3d &p2,
+                            const double &y1, const double &y2,
+                            const Vector3d &v1, const double &yd1,
+                            vector<Vector3d> &path);
   // Coarse to fine path searching
-  static double searchPath(const Vector3d& p1, const Vector3d& p2, vector<Vector3d>& path);
+  static double searchPath(const Vector3d &p1, const Vector3d &p2,
+                           vector<Vector3d> &path);
 
   // Data
   vector<ViewNode::Ptr> neighbors_;
@@ -82,5 +79,5 @@ public:
   static shared_ptr<RayCaster> caster_;
   static shared_ptr<SDFMap> map_;
 };
-}
+} // namespace fast_planner
 #endif

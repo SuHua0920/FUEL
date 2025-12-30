@@ -10,14 +10,14 @@ namespace fast_planner {
 // A segment of polynomial trajectory
 class Polynomial {
 public:
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   typedef Eigen::Matrix<double, 6, 1> Vector6d;
 
-  Polynomial() {
-  }
-  ~Polynomial() {
-  }
+  Polynomial() {}
+  ~Polynomial() {}
 
-  Polynomial(const Vector6d& cx, const Vector6d& cy, const Vector6d& cz, const double& time) {
+  Polynomial(const Vector6d &cx, const Vector6d &cy, const Vector6d &cz,
+             const double &time) {
     cx_ = cx;
     cy_ = cy;
     cz_ = cz;
@@ -25,7 +25,7 @@ public:
   }
 
   // Get the k-th order derivative of t^n, n*(n-1)...(n-k+1)* t^(n-k)
-  double getTBasis(const double& t, const int& n, const int& k) {
+  double getTBasis(const double &t, const int &n, const int &k) {
     int coeff = 1;
     for (int i = n; i >= n - k + 1; --i)
       coeff *= i;
@@ -33,7 +33,7 @@ public:
   }
 
   // Evaluate pos, vel, acc..., k=0 for pos, 1 for vel...
-  Eigen::Vector3d evaluate(const double& t, const int& k) {
+  Eigen::Vector3d evaluate(const double &t, const int &k) {
     Vector6d tv = Vector6d::Zero();
     for (int i = k; i < 6; ++i)
       tv[i] = getTBasis(t, i, k);
@@ -46,9 +46,7 @@ public:
   }
 
   // Get the duration of the polynomial
-  double getTime() const {
-    return time_;
-  }
+  double getTime() const { return time_; }
 
 private:
   // Time of the polynomial segment
@@ -61,10 +59,9 @@ private:
 
 class PolynomialTraj {
 public:
-  PolynomialTraj(/* args */) {
-  }
-  ~PolynomialTraj() {
-  }
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+  PolynomialTraj(/* args */) {}
+  ~PolynomialTraj() {}
 
   void reset() {
     segments_.clear();
@@ -74,12 +71,12 @@ public:
     length_ = -1;
   }
 
-  void addSegment(const Polynomial& poly) {
+  void addSegment(const Polynomial &poly) {
     segments_.push_back(poly);
     times_.push_back(poly.getTime());
   }
 
-  Eigen::Vector3d evaluate(const double& t, const int& k) {
+  Eigen::Vector3d evaluate(const double &t, const int &k) {
     // Find which segment t belong to
     int idx = 0;
     double ts = t;
@@ -96,21 +93,42 @@ public:
     return time_sum_;
   }
 
-  void getSamplePoints(vector<Eigen::Vector3d>& points) {
+  // void getSamplePoints(vector<Eigen::Vector3d> &points) {
+  //   double eval_t = 0.0;
+  //   double total_t = getTotalTime();
+  //   points.clear();
+  //   while (eval_t < total_t) {
+  //     Eigen::Vector3d pt = evaluate(eval_t, 0);
+  //     points.push_back(pt);
+  //     eval_t += 0.01;
+  //   }
+  //   sample_points_ = points;
+  // }
+  void getSamplePoints(vector<Eigen::Vector3d> &points) {
     double eval_t = 0.0;
     double total_t = getTotalTime();
     points.clear();
+
+    // 临时 aligned vector
+    vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>>
+        aligned_points;
+
     while (eval_t < total_t) {
       Eigen::Vector3d pt = evaluate(eval_t, 0);
-      points.push_back(pt);
+      aligned_points.push_back(pt);
       eval_t += 0.01;
     }
-    sample_points_ = points;
+
+    sample_points_ = aligned_points; // 内部安全
+
+    // 同步回普通 vector，保证接口不变
+    points.assign(aligned_points.begin(), aligned_points.end());
   }
 
   double getLength() {
     vector<Eigen::Vector3d> pts;
-    if (sample_points_.empty()) getSamplePoints(pts);
+    if (sample_points_.empty())
+      getSamplePoints(pts);
 
     length_ = 0.0;
     Eigen::Vector3d p_prev = sample_points_[0];
@@ -124,15 +142,19 @@ public:
   }
 
   double getMeanSpeed() {
-    if (time_sum_ < 0) getTotalTime();
-    if (length_ < 0) getLength();
+    if (time_sum_ < 0)
+      getTotalTime();
+    if (length_ < 0)
+      getLength();
     return length_ / time_sum_;
   }
 
-  // Compute the integral of squared derivative (k is the order) along the trajectory
-  double getIntegralCost(const int& k) {
+  // Compute the integral of squared derivative (k is the order) along the
+  // trajectory
+  double getIntegralCost(const int &k) {
     double cost = 0.0;
-    if (time_sum_ < 0) getTotalTime();
+    if (time_sum_ < 0)
+      getTotalTime();
 
     for (double ts = 0; ts < time_sum_; ts += 0.01) {
       Eigen::Vector3d um = evaluate(ts, k);
@@ -141,14 +163,16 @@ public:
     return cost;
   }
 
-  void getMeanAndMaxDerivative(double& mean_d, double& max_d, const int& k) {
+  void getMeanAndMaxDerivative(double &mean_d, double &max_d, const int &k) {
     mean_d = max_d = 0;
     int sample_num = 0;
-    if (time_sum_ < 0) getTotalTime();
+    if (time_sum_ < 0)
+      getTotalTime();
     for (double ts = 0; ts < time_sum_; ts += 0.01) {
       auto ds = evaluate(ts, k).norm();
       mean_d += ds;
-      if (ds > max_d) max_d = ds;
+      if (ds > max_d)
+        max_d = ds;
       sample_num++;
     }
     mean_d /= double(sample_num);
@@ -156,24 +180,30 @@ public:
 
   // input : position of waypoints, start/end vel and acc, segment time
   // Pos: Nx3
-  static void waypointsTraj(const Eigen::MatrixXd& positions, const Eigen::Vector3d& start_vel,
-                            const Eigen::Vector3d& end_vel, const Eigen::Vector3d& start_acc,
-                            const Eigen::Vector3d& end_acc, const Eigen::VectorXd& times,
-                            PolynomialTraj& poly_traj);
+  static void waypointsTraj(const Eigen::MatrixXd &positions,
+                            const Eigen::Vector3d &start_vel,
+                            const Eigen::Vector3d &end_vel,
+                            const Eigen::Vector3d &start_acc,
+                            const Eigen::Vector3d &end_acc,
+                            const Eigen::VectorXd &times,
+                            PolynomialTraj &poly_traj);
 
 private:
   vector<Polynomial> segments_;
-  vector<double> times_;  // Time duration of each segment
+  vector<double> times_; // Time duration of each segment
 
   // Properties of traj
   double time_sum_;
-  vector<Eigen::Vector3d> sample_points_;
+  vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>>
+      sample_points_;
+  // vector<Eigen::Vector3d> sample_points_;
   double length_;
 };
 
-PolynomialTraj fastLine4deg(Eigen::Vector3d start, Eigen::Vector3d end, double max_vel, double max_acc,
-                            double max_jerk);
-PolynomialTraj fastLine3deg(Eigen::Vector3d start, Eigen::Vector3d end, double max_vel, double max_acc);
-}
+PolynomialTraj fastLine4deg(Eigen::Vector3d start, Eigen::Vector3d end,
+                            double max_vel, double max_acc, double max_jerk);
+PolynomialTraj fastLine3deg(Eigen::Vector3d start, Eigen::Vector3d end,
+                            double max_vel, double max_acc);
+} // namespace fast_planner
 
 #endif

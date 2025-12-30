@@ -16,9 +16,9 @@
 #include <memory>
 #include <random>
 
-using std::shared_ptr;
-using std::normal_distribution;
 using std::default_random_engine;
+using std::normal_distribution;
+using std::shared_ptr;
 
 namespace fast_planner {
 class SDFMap;
@@ -27,16 +27,17 @@ class MapROS {
 public:
   MapROS();
   ~MapROS();
-  void setMap(SDFMap* map);
+  void setMap(SDFMap *map);
   void init();
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
 private:
-  void depthPoseCallback(const sensor_msgs::ImageConstPtr& img,
-                         const geometry_msgs::PoseStampedConstPtr& pose);
-  void cloudPoseCallback(const sensor_msgs::PointCloud2ConstPtr& msg,
-                         const geometry_msgs::PoseStampedConstPtr& pose);
-  void updateESDFCallback(const ros::TimerEvent& /*event*/);
-  void visCallback(const ros::TimerEvent& /*event*/);
+  void depthPoseCallback(const sensor_msgs::ImageConstPtr &img,
+                         const geometry_msgs::PoseStampedConstPtr &pose);
+  void cloudPoseCallback(const sensor_msgs::PointCloud2ConstPtr &msg,
+                         const geometry_msgs::PoseStampedConstPtr &pose);
+  void updateESDFCallback(const ros::TimerEvent & /*event*/);
+  void visCallback(const ros::TimerEvent & /*event*/);
 
   void publishMapAll();
   void publishMapLocal();
@@ -47,15 +48,18 @@ private:
 
   void proessDepthImage();
 
-  SDFMap* map_;
+  SDFMap *map_;
   // may use ExactTime?
-  typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, geometry_msgs::PoseStamped>
+  typedef message_filters::sync_policies::ApproximateTime<
+      sensor_msgs::Image, geometry_msgs::PoseStamped>
       SyncPolicyImagePose;
-  typedef shared_ptr<message_filters::Synchronizer<SyncPolicyImagePose>> SynchronizerImagePose;
-  typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::PointCloud2,
-                                                          geometry_msgs::PoseStamped>
+  typedef shared_ptr<message_filters::Synchronizer<SyncPolicyImagePose>>
+      SynchronizerImagePose;
+  typedef message_filters::sync_policies::ApproximateTime<
+      sensor_msgs::PointCloud2, geometry_msgs::PoseStamped>
       SyncPolicyCloudPose;
-  typedef shared_ptr<message_filters::Synchronizer<SyncPolicyCloudPose>> SynchronizerCloudPose;
+  typedef shared_ptr<message_filters::Synchronizer<SyncPolicyCloudPose>>
+      SynchronizerCloudPose;
 
   ros::NodeHandle node_;
   shared_ptr<message_filters::Subscriber<sensor_msgs::Image>> depth_sub_;
@@ -64,8 +68,8 @@ private:
   SynchronizerImagePose sync_image_pose_;
   SynchronizerCloudPose sync_cloud_pose_;
 
-  ros::Publisher map_local_pub_, map_local_inflate_pub_, esdf_pub_, map_all_pub_, unknown_pub_,
-      update_range_pub_, depth_pub_;
+  ros::Publisher map_local_pub_, map_local_inflate_pub_, esdf_pub_,
+      map_all_pub_, unknown_pub_, update_range_pub_, depth_pub_;
   ros::Timer esdf_timer_, vis_timer_;
 
   // params, depth projection
@@ -101,6 +105,6 @@ private:
 
   friend SDFMap;
 };
-}
+} // namespace fast_planner
 
 #endif

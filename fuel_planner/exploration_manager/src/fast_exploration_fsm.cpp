@@ -364,6 +364,7 @@ void FastExplorationFSM::odometryCallback(const nav_msgs::OdometryConstPtr& msg)
   fd_->have_odom_ = true;
 }
 
+//状态转换从原状态到新状态
 void FastExplorationFSM::transitState(EXPL_STATE new_state, string pos_call) {
   int pre_s = int(state_);
   state_ = new_state;

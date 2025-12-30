@@ -35,6 +35,7 @@ public:
   int time_idx;
 
   /* -------------------- */
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   Node() {
     parent = NULL;
     node_state = NOT_EXPAND;
@@ -57,6 +58,7 @@ private:
   std::unordered_map<Eigen::Vector4i, NodePtr, matrix_hash0<Eigen::Vector4i>> data_4d_;
 
 public:
+EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   NodeHashTable0(/* args */) {
   }
   ~NodeHashTable0() {
@@ -118,6 +120,7 @@ private:
   double getEuclHeu(Eigen::Vector3d x1, Eigen::Vector3d x2);
 
 public:
+
   Astar(){};
   ~Astar();
 
@@ -133,6 +136,7 @@ public:
   void setEnvironment(const EDTEnvironment::Ptr& env);
   std::vector<Eigen::Vector3d> getPath();
   std::vector<Eigen::Vector3d> getVisited();
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
 
 }  // namespace fast_planner

@@ -60,6 +60,7 @@ private:
   std::unordered_map<Eigen::Vector4i, PathNodePtr, matrix_hash<Eigen::Vector4i>> data_4d_;
 
 public:
+EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   NodeHashTable(/* args */) {
   }
   ~NodeHashTable() {

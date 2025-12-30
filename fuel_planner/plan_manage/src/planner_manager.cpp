@@ -82,7 +82,9 @@ void FastPlannerManager::initPlanModules(ros::NodeHandle& nh) {
   if (use_active_perception) {
     frontier_finder_.reset(new FrontierFinder(edt_environment_, nh));
     heading_planner_.reset(new HeadingPlanner(nh));
+    ROS_INFO("Init heading planner");
     heading_planner_->setMap(sdf_map_);
+    ROS_INFO("setMap");
     visib_util_.reset(new VisibilityUtil(nh));
     visib_util_->setEDTEnvironment(edt_environment_);
     plan_data_.view_cons_.idx_ = -1;
