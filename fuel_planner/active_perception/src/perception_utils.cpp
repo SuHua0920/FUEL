@@ -46,6 +46,7 @@ PerceptionUtils::PerceptionUtils(ros::NodeHandle& nh) {
   cam_vertices2_.push_back(left_up);
 }
 
+// 
 void PerceptionUtils::setPose(const Vector3d& pos, const double& yaw) {
   pos_ = pos;
   yaw_ = yaw;

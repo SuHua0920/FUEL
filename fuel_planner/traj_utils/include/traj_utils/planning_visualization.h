@@ -15,6 +15,8 @@
 
 using std::vector;
 namespace fast_planner {
+
+// 可视化类
 class PlanningVisualization {
 private:
   enum TRAJECTORY_PLANNING_ID {

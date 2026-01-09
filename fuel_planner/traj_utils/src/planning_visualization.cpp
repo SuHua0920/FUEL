@@ -3,7 +3,8 @@
 using std::cout;
 using std::endl;
 namespace fast_planner {
-PlanningVisualization::PlanningVisualization(ros::NodeHandle& nh) {
+// 负责发布planner相关信息
+  PlanningVisualization::PlanningVisualization(ros::NodeHandle& nh) {
   node = nh;
 
   traj_pub_ = node.advertise<visualization_msgs::Marker>("/planning_vis/trajectory", 100);
@@ -20,6 +21,7 @@ PlanningVisualization::PlanningVisualization(ros::NodeHandle& nh) {
                                                           100);
   pubs_.push_back(visib_pub_);
 
+  // 发布前沿点云
   frontier_pub_ = node.advertise<visualization_msgs::Marker>("/planning_vis/frontier", 10000);
   pubs_.push_back(frontier_pub_);
 
@@ -36,6 +38,7 @@ PlanningVisualization::PlanningVisualization(ros::NodeHandle& nh) {
   last_frontier_num_ = 0;
 }
 
+// 填充marker的基础信息，形状，颜色，id号，ns等
 void PlanningVisualization::fillBasicInfo(visualization_msgs::Marker& mk, const Eigen::Vector3d& scale,
                                           const Eigen::Vector4d& color, const string& ns, const int& id,
                                           const int& shape) {
@@ -60,6 +63,7 @@ void PlanningVisualization::fillBasicInfo(visualization_msgs::Marker& mk, const 
   mk.scale.z = scale[2];
 }
 
+// 填充geometry 点云信息
 void PlanningVisualization::fillGeometryInfo(visualization_msgs::Marker& mk,
                                              const vector<Eigen::Vector3d>& list) {
   geometry_msgs::Point pt;
@@ -71,6 +75,7 @@ void PlanningVisualization::fillGeometryInfo(visualization_msgs::Marker& mk,
   }
 }
 
+// 填充geometry 线段（点对）信息
 void PlanningVisualization::fillGeometryInfo(visualization_msgs::Marker& mk,
                                              const vector<Eigen::Vector3d>& list1,
                                              const vector<Eigen::Vector3d>& list2) {
@@ -123,6 +128,7 @@ void PlanningVisualization::drawSpheres(const vector<Eigen::Vector3d>& list, con
   ros::Duration(0.0005).sleep();
 }
 
+// 以list点为cubes中心,发布3D立方体
 void PlanningVisualization::drawCubes(const vector<Eigen::Vector3d>& list, const double& scale,
                                       const Eigen::Vector4d& color, const string& ns, const int& id,
                                       const int& pub_id) {
@@ -141,6 +147,7 @@ void PlanningVisualization::drawCubes(const vector<Eigen::Vector3d>& list, const
   ros::Duration(0.0005).sleep();
 }
 
+// 画list1->list2的多对线段
 void PlanningVisualization::drawLines(const vector<Eigen::Vector3d>& list1,
                                       const vector<Eigen::Vector3d>& list2, const double& scale,
                                       const Eigen::Vector4d& color, const string& ns, const int& id,
@@ -162,6 +169,7 @@ void PlanningVisualization::drawLines(const vector<Eigen::Vector3d>& list1,
   ros::Duration(0.0005).sleep();
 }
 
+// 画list连续的点
 void PlanningVisualization::drawLines(const vector<Eigen::Vector3d>& list, const double& scale,
                                       const Eigen::Vector4d& color, const string& ns, const int& id,
                                       const int& pub_id) {
@@ -189,6 +197,7 @@ void PlanningVisualization::drawLines(const vector<Eigen::Vector3d>& list, const
   ros::Duration(0.0005).sleep();
 }
 
+// 画多个球体列表
 void PlanningVisualization::displaySphereList(const vector<Eigen::Vector3d>& list, double resolution,
                                               const Eigen::Vector4d& color, int id, int pub_id) {
   visualization_msgs::Marker mk;
@@ -225,6 +234,7 @@ void PlanningVisualization::displaySphereList(const vector<Eigen::Vector3d>& lis
   ros::Duration(0.0005).sleep();
 }
 
+// 画多个cube列表
 void PlanningVisualization::displayCubeList(const vector<Eigen::Vector3d>& list, double resolution,
                                             const Eigen::Vector4d& color, int id, int pub_id) {
   visualization_msgs::Marker mk;
@@ -262,6 +272,7 @@ void PlanningVisualization::displayCubeList(const vector<Eigen::Vector3d>& list,
   ros::Duration(0.0005).sleep();
 }
 
+// 画多条线段列表
 void PlanningVisualization::displayLineList(const vector<Eigen::Vector3d>& list1,
                                             const vector<Eigen::Vector3d>& list2, double line_width,
                                             const Eigen::Vector4d& color, int id, int pub_id) {

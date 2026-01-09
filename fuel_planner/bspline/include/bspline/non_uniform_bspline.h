@@ -10,6 +10,7 @@ using namespace std;
 namespace fast_planner {
 // An implementation of non-uniform B-spline with different dimensions
 // It also represents uniform B-spline which is a special case of non-uniform
+// 非均匀B样条
 class NonUniformBspline {
 public:
   NonUniformBspline();
